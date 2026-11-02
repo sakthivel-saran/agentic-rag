@@ -251,13 +251,13 @@ FDE_Agentic_RAG_IT_Copilot/
 ### Step 1 — Create virtual environment
 
 ```bash
-python -m venv venv
+python -m venv .venv
 ```
 
 Windows:
 
 ```bash
-venv\Scripts\activate
+.venv\Scripts\Activate.ps1
 ```
 
 macOS/Linux:
@@ -347,8 +347,12 @@ Pinecone Vector Database
 ### Step 5 — Run the application
 
 ```bash
-python run.py
+python -m uvicorn app.main:app --reload
 ```
+
+On Windows, you can also run `run.ps1` from the project root. It uses the project
+`.venv` interpreter and installs `requirements.txt` into that environment if it
+is missing.
 
 Open:
 
