@@ -5,6 +5,8 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.embeddings import Embeddings
 from openai import OpenAI
+from google import genai
+from google.genai import types
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -18,6 +20,7 @@ EMBEDDING_DIMENSIONS = {
     "text-embedding-ada-002": 1536,
     "all-minilm-l6-v2": 384,
     "nvidia/nemotron-3-embed-1b": 2048,
+    "gemini-embedding-001": 3072,
   
 }
 
@@ -40,6 +43,8 @@ def get_embedding_dimension(model_name: str| None = None) -> int:
         return 384
     if normalized == "nvidia/nemotron-3-embed-1b":
         return 2048
+    if normalized == "gemini-embedding-001":
+        return 3072
 
 
     raise ValueError(
@@ -51,7 +56,11 @@ def get_embeddings():
     global _embeddings
     if _embeddings is None:
         model_name = settings.embedding_model.strip()
-        if model_name.lower().startswith("nvidia/"):
+        if model_name.lower() == "gemini-embedding-001":
+            if not settings.gemini_api_key:
+                raise RuntimeError("GEMINI_API_KEY is required for the configured Gemini embedding model")
+            _embeddings = GeminiEmbeddings(settings.gemini_api_key, model_name)
+        elif model_name.lower().startswith("nvidia/"):
             if not settings.nvidia_api_key:
                 raise RuntimeError("NVIDIA_API_KEY is required for the configured NVIDIA embedding model")
             _embeddings = NvidiaEmbeddings(settings.nvidia_api_key, model_name)
@@ -94,6 +103,31 @@ class NvidiaEmbeddings(Embeddings):
 
     def embed_query(self, text: str) -> list[float]:
         return self._embed([text], "query")[0]
+
+
+class GeminiEmbeddings(Embeddings):
+    """Gemini embeddings with retrieval-specific document and query task types."""
+
+    def __init__(self, api_key: str, model: str):
+        self.client = genai.Client(api_key=api_key)
+        self.model = model
+
+    def _embed(self, texts: list[str], task_type: str) -> list[list[float]]:
+        response = self.client.models.embed_content(
+            model=self.model,
+            contents=texts,
+            config=types.EmbedContentConfig(
+                task_type=task_type,
+                output_dimensionality=3072,
+            ),
+        )
+        return [item.values for item in response.embeddings]
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return self._embed(texts, "RETRIEVAL_DOCUMENT")
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._embed([text], "RETRIEVAL_QUERY")[0]
 
 
 def ensure_index():
