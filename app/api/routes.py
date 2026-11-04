@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from app.core.config import get_settings
 from app.rag.workflow import ask
 from app.rag.vectorstore import add_documents
-from app.services.ingestion import load_file, chunk_documents
+from app.services.ingestion import SUPPORTED, load_file, chunk_documents
 from app.services.audit import write_audit
 
 router = APIRouter(prefix="/api")
@@ -42,12 +42,15 @@ def chat(payload: ChatRequest):
 async def ingest(file: UploadFile = File(...), x_admin_key: str = Header(default="")):
     if x_admin_key != settings.admin_api_key:
         raise HTTPException(status_code=401, detail="Invalid admin key")
-    suffix = Path(file.filename or "").suffix.lower()
-    if suffix not in SUPPORTED:
-        raise HTTPException(status_code=400, detail=f"Supported: {', '.join(sorted(SUPPORTED))}")
-    dest = Path(settings.upload_dir) / Path(file.filename).name
-    stage = "saving the uploaded file"
+    stage = "validating the upload"
+    dest = None
     try:
+        suffix = Path(file.filename or "").suffix.lower()
+        if suffix not in SUPPORTED:
+            raise HTTPException(status_code=400, detail=f"Supported: {', '.join(sorted(SUPPORTED))}")
+        dest = Path(settings.upload_dir) / Path(file.filename).name
+
+        stage = "saving the uploaded file"
         dest.parent.mkdir(parents=True, exist_ok=True)
         contents = await file.read()
         if not contents:
@@ -70,7 +73,8 @@ async def ingest(file: UploadFile = File(...), x_admin_key: str = Header(default
     except HTTPException:
         raise
     except Exception as exc:
-        logger.exception("Document ingestion failed while %s (%s)", stage, dest.name)
+        filename = dest.name if dest else (file.filename or "<unknown>")
+        logger.exception("Document ingestion failed while %s (%s)", stage, filename)
         raise HTTPException(
             status_code=500,
             detail=f"Document ingestion failed while {stage}: {type(exc).__name__}: {exc}",
