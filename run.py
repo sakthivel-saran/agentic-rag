@@ -1,6 +1,4 @@
-from app.services.ingestion import load_file, chunk_documents
-from app.rag.vectorstore import add_documents
-docs = load_file(path="data/sample kb/company_it_handbook.md")
-chunks = chunk_documents(docs)
-add_documents(chunks)
-print(len(chunks))
+import uvicorn
+
+if __name__ == "__main__":
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
