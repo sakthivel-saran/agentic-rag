@@ -3,6 +3,8 @@ from pinecone import Pinecone, ServerlessSpec
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_pinecone import PineconeVectorStore
+from langchain_core.embeddings import Embeddings
+from openai import OpenAI
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -15,6 +17,8 @@ EMBEDDING_DIMENSIONS = {
     "text-embedding-3-large": 3072,
     "text-embedding-ada-002": 1536,
     "all-minilm-l6-v2": 384,
+    "nvidia/nemotron-3-embed-1b": 2048,
+  
 }
 
 
@@ -34,6 +38,8 @@ def get_embedding_dimension(model_name: str| None = None) -> int:
         return 1536
     if "all-minilm" in normalized:
         return 384
+    if normalized == "nvidia/nemotron-3-embed-1b":
+        return 2048
 
 
     raise ValueError(
@@ -45,7 +51,11 @@ def get_embeddings():
     global _embeddings
     if _embeddings is None:
         model_name = settings.embedding_model.strip()
-        if model_name.lower().startswith("text-embedding-"):
+        if model_name.lower().startswith("nvidia/"):
+            if not settings.nvidia_api_key:
+                raise RuntimeError("NVIDIA_API_KEY is required for the configured NVIDIA embedding model")
+            _embeddings = NvidiaEmbeddings(settings.nvidia_api_key, model_name)
+        elif model_name.lower().startswith("text-embedding-"):
             if not settings.openai_api_key:
                 raise RuntimeError(
                     "OPENAI_API_KEY is required for the configured embedding model "
@@ -59,6 +69,31 @@ def get_embeddings():
         else:
             _embeddings = HuggingFaceEmbeddings(model_name=model_name)
     return _embeddings
+
+
+class NvidiaEmbeddings(Embeddings):
+    """NVIDIA NIM embeddings with distinct passage and query modes."""
+
+    def __init__(self, api_key: str, model: str):
+        self.client = OpenAI(
+            api_key=api_key,
+            base_url="https://integrate.api.nvidia.com/v1",
+        )
+        self.model = model
+
+    def _embed(self, texts: list[str], input_type: str) -> list[list[float]]:
+        response = self.client.embeddings.create(
+            model=self.model,
+            input=texts,
+            extra_body={"input_type": input_type},
+        )
+        return [item.embedding for item in sorted(response.data, key=lambda item: item.index)]
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return self._embed(texts, "passage")
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._embed([text], "query")[0]
 
 
 def ensure_index():
@@ -76,9 +111,12 @@ def ensure_index():
             current_dimension = index_info.get("dimension")
 
         if current_dimension is not None and current_dimension != desired_dimension:
-            pc.delete_index(name=settings.pinecone_index_name)
-            while settings.pinecone_index_name in [x["name"] for x in pc.list_indexes()]:
-                time.sleep(1)
+            raise RuntimeError(
+                f"Pinecone index '{settings.pinecone_index_name}' has dimension "
+                f"{current_dimension}, but embedding model '{settings.embedding_model}' "
+                f"requires {desired_dimension}. Choose a new index name or migrate/rebuild "
+                "the index; the existing index was left untouched."
+            )
 
     if settings.pinecone_index_name not in [x["name"] for x in pc.list_indexes()]:
         pc.create_index(

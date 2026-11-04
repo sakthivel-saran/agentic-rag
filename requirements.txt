@@ -19,3 +19,5 @@ pypdf
 python-docx
 python-dotenv
 langchain
+# Use a prebuilt Windows wheel on Python 3.14 instead of building zstandard from source.
+zstandard==0.25.0
