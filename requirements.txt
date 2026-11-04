@@ -7,6 +7,7 @@ langgraph
 langchain-core
 langchain-community
 langchain-openai
+google-genai
 langchain-groq
 sentence-transformers
 langchain-tavily
