@@ -346,7 +346,7 @@ Pinecone Vector Database
 ### Step 5 — Run the application
 
 ```bash
-python -m uvicorn app.main:app --reload
+python -m uvicorn app.main:app --reload --port 8080
 ```
 
 On Windows, you can also run `run.ps1` from the project root. It uses the project
@@ -356,13 +356,13 @@ is missing.
 Open:
 
 ```text
-http://127.0.0.1:8000
+http://127.0.0.1:8080
 ```
 
 FastAPI API docs:
 
 ```text
-http://127.0.0.1:8000/docs
+http://127.0.0.1:8080/docs
 ```
 
 ---

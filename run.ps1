@@ -12,4 +12,4 @@ if ($LASTEXITCODE -ne 0) {
     & $python -m pip install -r (Join-Path $projectRoot "requirements.txt")
 }
 
-& $python -m uvicorn app.main:app --reload
+& $python -m uvicorn app.main:app --reload --port 8080
