@@ -9,7 +9,6 @@ langchain-community
 langchain-openai
 google-genai
 langchain-groq
-sentence-transformers
 langchain-tavily
 langchain-pinecone
 langchain-text-splitters

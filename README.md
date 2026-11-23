@@ -301,6 +301,12 @@ ADMIN_API_KEY=change-me-in-production
 APP_ENV=development
 ```
 
+For Vercel, set `EMBEDDING_MODEL=gemini-embedding-001` and configure
+`GEMINI_API_KEY` in the project's environment variables. Local Hugging Face
+embeddings are optional and can be installed with
+`pip install -r requirements-local-embeddings.txt`; avoid installing them in
+serverless deployments because they pull in large ML runtime dependencies.
+
 #### Environment Variable Reference
 
 | Variable | Description | Example | Required |
@@ -314,7 +320,7 @@ APP_ENV=development
 | `PINECONE_NAMESPACE` | Pinecone namespace for document isolation | `company-it-kb` | ⚠️ Optional (default: `company-it-kb`) |
 | `GROQ_MODEL` | Groq model identifier | `openai/gpt-oss-20b` | ⚠️ Optional (default: `openai/gpt-oss-20b`) |
 | `OPENAI_MODEL` | OpenAI model identifier | `gpt-4o-mini` | ⚠️ Optional (default: `gpt-4o-mini`) |
-| `EMBEDDING_MODEL` | Embedding model for vectorization | `gemini-embedding-001` | ⚠️ Optional (default: local MiniLM, 384 dimensions; Gemini uses 3072) |
+| `EMBEDDING_MODEL` | Embedding model for vectorization | `gemini-embedding-001` | ⚠️ Optional (default: local MiniLM, 384 dimensions; hosted Gemini uses 3072) |
 | `ADMIN_API_KEY` | Secret key for admin endpoints (document ingestion) | `your-secure-key` | ⚠️ Optional (default: `change-me`) |
 | `APP_ENV` | Application environment | `development` or `production` | ⚠️ Optional (default: `development`) |
 

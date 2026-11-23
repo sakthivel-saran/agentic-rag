@@ -1,7 +1,6 @@
 import time
 from pinecone import Pinecone, ServerlessSpec
 from langchain_openai import OpenAIEmbeddings
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.embeddings import Embeddings
 from openai import OpenAI
@@ -76,6 +75,14 @@ def get_embeddings():
                 openai_api_key=settings.openai_api_key,
             )
         else:
+            try:
+                from langchain_community.embeddings import HuggingFaceEmbeddings
+            except ImportError as exc:
+                raise RuntimeError(
+                    "Local Hugging Face embeddings require the optional "
+                    "'sentence-transformers' package. Install it for local use, "
+                    "or configure a hosted EMBEDDING_MODEL for Vercel."
+                ) from exc
             _embeddings = HuggingFaceEmbeddings(model_name=model_name)
     return _embeddings
 
