@@ -20,7 +20,9 @@ class Settings(BaseSettings):
     top_k: int = 4
     max_retries: int = 1
     admin_api_key: str = "change-me"
-    audit_db_path: str = str(BASE_DIR / "data" / "audit.db")
+    # Serverless hosts such as Vercel mount the application bundle read-only.
+    # /tmp is writable there; local deployments retain the project data path.
+    audit_db_path: str = "/tmp/agentic-rag-audit.db" if __import__("os").environ.get("VERCEL") else str(BASE_DIR / "data" / "audit.db")
     upload_dir: str = str(BASE_DIR / "uploads")
     sample_kb_dir: str = str(BASE_DIR / "data" / "sample kb")
 

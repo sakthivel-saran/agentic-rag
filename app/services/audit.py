@@ -6,6 +6,8 @@ from app.core.config import get_settings
 settings = get_settings()
 
 def init_db() -> None:
+    from pathlib import Path
+    Path(settings.audit_db_path).parent.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(settings.audit_db_path)
     con.execute(
         """CREATE TABLE IF NOT EXISTS query_audit (
